@@ -1,4 +1,5 @@
 extern crate serde;
+extern crate serde_json;
 
 use std::cmp;
 use std::fmt;
@@ -6,12 +7,14 @@ use std::collections::HashMap;
 
 use serde::ser::{Serialize, Serializer, SerializeStruct};
 
+pub mod ffi;
+
 #[derive(Debug)]
 pub struct Histogram {
     bucket_count: usize,
     min: usize,
     max: usize,
-    ranges: Vec<usize>,
+    ranges: &'static [usize],
     buckets: Vec<usize>,
 
     count: usize,
@@ -53,16 +56,27 @@ fn exponential_range(min: usize, max: usize, count: usize) -> Vec<usize> {
   ranges
 }
 
-
 impl Histogram {
+    pub fn factory_get(min: usize, max: usize, ranges: &'static [usize]) -> Histogram {
+        Histogram {
+            bucket_count: ranges.len(),
+            min: min,
+            max: max,
+            ranges: ranges,
+            buckets: vec![0; ranges.len()],
+            count: 0,
+            sum: 0,
+        }
+    }
     pub fn with_bucket_count(count: usize, min: usize, max: usize) -> Histogram {
         let min = cmp::max(1, min);
 
         let ranges = linear_range(min, max, count);
+        let ranges = Box::leak(ranges.into_boxed_slice());
 
         Histogram {
             bucket_count: count,
-            min: 0,
+            min: min,
             max: max,
             ranges: ranges,
             buckets: vec![0; count],
@@ -75,10 +89,11 @@ impl Histogram {
         let min = cmp::max(1, min);
 
         let ranges = exponential_range(min, max, count);
+        let ranges = Box::leak(ranges.into_boxed_slice());
 
         Histogram {
             bucket_count: count,
-            min: 0,
+            min: min,
             max: max,
             ranges: ranges,
             buckets: vec![0; count],

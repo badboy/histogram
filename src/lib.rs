@@ -1,5 +1,10 @@
+extern crate serde;
+
 use std::cmp;
 use std::fmt;
+use std::collections::HashMap;
+
+use serde::ser::{Serialize, Serializer, SerializeStruct};
 
 #[derive(Debug)]
 pub struct Histogram {
@@ -118,6 +123,12 @@ impl Histogram {
         }
 
         &mut self.buckets[mid]
+    }
+
+    pub fn persisted(&self) -> PersistedHistogram {
+        PersistedHistogram {
+            histogram: self
+        }
     }
 }
 
@@ -254,6 +265,42 @@ impl fmt::Display for Histogram {
         }
 
         Ok(())
+    }
+}
+
+pub struct PersistedHistogram<'a> {
+    histogram: &'a Histogram
+}
+
+impl<'a> Serialize for PersistedHistogram<'a>
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("PersistedHistogram", 2)?;
+        state.serialize_field("sum", &self.histogram.sum)?;
+        state.serialize_field("counts", &self.histogram.buckets)?;
+        state.end()
+    }
+}
+
+impl Serialize for Histogram
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Histogram", 5)?;
+        state.serialize_field("range", &self.ranges)?;
+        state.serialize_field("bucket_count", &self.bucket_count)?;
+        state.serialize_field("histogram_type", &1)?;
+        let values = self.buckets.iter().enumerate().map(|(idx, count)| {
+            (self.ranges[idx].to_string(), *count)
+        }).collect::<HashMap<String, usize>>();
+        state.serialize_field("values", &values)?;
+        state.serialize_field("sum", &self.sum)?;
+        state.end()
     }
 }
 

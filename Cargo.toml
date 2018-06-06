@@ -4,3 +4,5 @@ version = "0.1.0"
 authors = ["Jan-Erik Rediger <janerik@fnordig.de>"]
 
 [dependencies]
+serde = "1.0.66"
+serde_json = "1.0.19"

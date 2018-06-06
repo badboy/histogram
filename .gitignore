@@ -2,3 +2,7 @@
 /target
 **/*.rs.bk
 Cargo.lock
+cpp/histogram.h
+libhistogram.dylib
+cpp/histo_test.dSYM
+cpp/histo_test

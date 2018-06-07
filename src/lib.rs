@@ -68,7 +68,8 @@ impl Histogram {
             sum: 0,
         }
     }
-    pub fn with_bucket_count(count: usize, min: usize, max: usize) -> Histogram {
+
+    pub fn linear(min: usize, max: usize, count: usize) -> Histogram {
         let min = cmp::max(1, min);
 
         let ranges = linear_range(min, max, count);
@@ -85,7 +86,7 @@ impl Histogram {
         }
     }
 
-    pub fn exp_with_bucket_count(count: usize, min: usize, max: usize) -> Histogram {
+    pub fn exponential(min: usize, max: usize, count: usize) -> Histogram {
         let min = cmp::max(1, min);
 
         let ranges = exponential_range(min, max, count);
@@ -100,6 +101,18 @@ impl Histogram {
             count: 0,
             sum: 0,
         }
+    }
+
+    pub fn flag() -> Histogram {
+        Self::boolean()
+    }
+
+    pub fn boolean() -> Histogram {
+        Self::linear(1, 2, 3)
+    }
+
+    pub fn enumerated(count: usize) -> Histogram {
+        Self::linear(1, count, count + 1)
     }
 
     pub fn add(&mut self, value: usize) {
@@ -118,6 +131,14 @@ impl Histogram {
             histogram: self,
             index: 0,
         }
+    }
+
+    pub fn sum(&self) -> usize {
+        self.sum
+    }
+
+    pub fn count(&self) -> usize {
+        self.count
     }
 
     fn bucket(&mut self, value: usize) -> &mut usize {
@@ -307,7 +328,7 @@ impl Serialize for Histogram
         S: Serializer,
     {
         let mut state = serializer.serialize_struct("Histogram", 5)?;
-        state.serialize_field("range", &self.ranges)?;
+        state.serialize_field("range", &[self.min, self.max])?;
         state.serialize_field("bucket_count", &self.bucket_count)?;
         state.serialize_field("histogram_type", &1)?;
         let values = self.buckets.iter().enumerate().map(|(idx, count)| {
@@ -325,8 +346,7 @@ mod tests {
 
     #[test]
     fn linear() {
-        let mut h = Histogram::with_bucket_count(10, 1, 500);
-        println!("{:#?}", h);
+        let mut h = Histogram::linear(1, 500, 10);
 
         h.add(0);
         h.add(1);
@@ -334,15 +354,18 @@ mod tests {
         h.add(450);
         h.add(700);
 
-        println!("{:#?}", h);
+        assert_eq!(5, h.count());
+        assert_eq!(0+1+14+450+700, h.sum());
 
-        assert!(false);
+        let expected_counts = [1, 2, 0, 0, 0, 0, 0, 0, 1, 1];
+        for (bucket, &expected) in h.buckets().zip(expected_counts.iter()) {
+            assert_eq!(expected, bucket.count(), "{:?} should have {} values", bucket, expected);
+        }
     }
 
     #[test]
     fn exp() {
-        let mut h = Histogram::exp_with_bucket_count(10, 1, 500);
-        println!("{:#?}", h);
+        let mut h = Histogram::exponential(1, 500, 10);
 
         h.add(0);
         h.add(1);
@@ -350,8 +373,47 @@ mod tests {
         h.add(450);
         h.add(700);
 
-        println!("{:#?}", h);
+        assert_eq!(5, h.count());
+        assert_eq!(0+1+14+450+700, h.sum());
 
-        assert!(false);
+        let expected_counts = [1, 1, 0, 0, 1, 0, 0, 0, 1, 1];
+        for (bucket, &expected) in h.buckets().zip(expected_counts.iter()) {
+            assert_eq!(expected, bucket.count(), "{:?} should have {} values", bucket, expected);
+        }
+    }
+
+    #[test]
+    fn enumerated() {
+        let mut h = Histogram::enumerated(10);
+
+        for i in 0..10 {
+            h.add(i+1);
+        }
+        h.add(10);
+
+        assert_eq!(11, h.count());
+        assert_eq!(10+10+9+8+7+6+5+4+3+2+1, h.sum());
+
+        let expected_counts = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2];
+        for (bucket, &expected) in h.buckets().zip(expected_counts.iter()) {
+            assert_eq!(expected, bucket.count(), "{:?} should have {} values", bucket, expected);
+        }
+    }
+
+    #[test]
+    fn boolean() {
+        let mut h = Histogram::boolean();
+
+        for i in 0..10 {
+            h.add((i%2==0) as usize);
+        }
+
+        assert_eq!(10, h.count());
+        assert_eq!(5, h.sum());
+
+        let expected_counts = [5, 5, 0];
+        for (bucket, &expected) in h.buckets().zip(expected_counts.iter()) {
+            assert_eq!(expected, bucket.count(), "{:?} should have {} values", bucket, expected);
+        }
     }
 }

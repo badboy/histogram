@@ -17,7 +17,7 @@ fn main() {
 }
 
 fn try_main() -> io::Result<()> {
-    let mut hist = histogram::Histogram::exp_with_bucket_count(10, 1, 500);
+    let mut hist = histogram::Histogram::exponential(10, 1, 500);
 
     let stdin = io::stdin();
     let mut stdin = stdin.lock();

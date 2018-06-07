@@ -18,11 +18,16 @@ fn main() {
 }
 
 fn try_main() -> io::Result<()> {
-    let typ = env::args().skip(1).next().unwrap_or_else(|| String::from("linear"));
+    let mut args = env::args().skip(1);
+    let typ = args.next().unwrap_or_else(|| String::from("linear"));
+    let min = args.next().unwrap_or_else(|| String::from("1")).parse::<usize>().unwrap();
+    let max = args.next().unwrap_or_else(|| String::from("500")).parse::<usize>().unwrap();
+    let count = args.next().unwrap_or_else(|| String::from("10")).parse::<usize>().unwrap();
+
     let mut hist = if typ == "linear" {
-        histogram::Histogram::linear(1, 500, 10)
+        histogram::Histogram::linear(min, max, count)
     } else {
-        histogram::Histogram::exponential(1, 500, 10)
+        histogram::Histogram::exponential(min, max, count)
     };
 
     let stdin = io::stdin();

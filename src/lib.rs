@@ -1,5 +1,7 @@
 extern crate serde;
 extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
 
 use std::cmp;
 use std::fmt;
@@ -8,6 +10,14 @@ use std::collections::HashMap;
 use serde::ser::{Serialize, Serializer, SerializeStruct};
 
 pub mod ffi;
+
+#[derive(Debug,Serialize)]
+pub enum HistoTyp {
+    Linear,
+    Exponential,
+    Boolean,
+    Enumerated,
+}
 
 #[derive(Debug)]
 pub struct Histogram {
@@ -19,6 +29,7 @@ pub struct Histogram {
 
     count: usize,
     sum: usize,
+    typ: HistoTyp,
 }
 
 fn linear_range(min: usize, max: usize, count: usize) -> Vec<usize> {
@@ -66,6 +77,7 @@ impl Histogram {
             buckets: vec![0; ranges.len()],
             count: 0,
             sum: 0,
+            typ: HistoTyp::Linear,
         }
     }
 
@@ -83,6 +95,7 @@ impl Histogram {
             buckets: vec![0; count],
             count: 0,
             sum: 0,
+            typ: HistoTyp::Linear,
         }
     }
 
@@ -100,6 +113,7 @@ impl Histogram {
             buckets: vec![0; count],
             count: 0,
             sum: 0,
+            typ: HistoTyp::Exponential,
         }
     }
 
@@ -108,11 +122,15 @@ impl Histogram {
     }
 
     pub fn boolean() -> Histogram {
-        Self::linear(1, 2, 3)
+        let mut h = Self::linear(1, 2, 3);
+        h.typ = HistoTyp::Boolean;
+        h
     }
 
     pub fn enumerated(count: usize) -> Histogram {
-        Self::linear(1, count, count + 1)
+        let mut h = Self::linear(1, count, count + 1);
+        h.typ = HistoTyp::Enumerated;
+        h
     }
 
     pub fn add(&mut self, value: usize) {
@@ -330,7 +348,7 @@ impl Serialize for Histogram
         let mut state = serializer.serialize_struct("Histogram", 5)?;
         state.serialize_field("range", &[self.min, self.max])?;
         state.serialize_field("bucket_count", &self.bucket_count)?;
-        state.serialize_field("histogram_type", &1)?;
+        state.serialize_field("histogram_type", &self.typ)?;
         let values = self.buckets.iter().enumerate().map(|(idx, count)| {
             (self.ranges[idx].to_string(), *count)
         }).collect::<HashMap<String, usize>>();

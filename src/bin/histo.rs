@@ -5,6 +5,7 @@ extern crate histogram;
 extern crate serde;
 extern crate serde_json;
 
+use std::env;
 use std::io::{self, BufRead, Write};
 use std::process;
 
@@ -17,7 +18,12 @@ fn main() {
 }
 
 fn try_main() -> io::Result<()> {
-    let mut hist = histogram::Histogram::exponential(10, 1, 500);
+    let typ = env::args().skip(1).next().unwrap_or_else(|| String::from("linear"));
+    let mut hist = if typ == "linear" {
+        histogram::Histogram::linear(1, 500, 10)
+    } else {
+        histogram::Histogram::exponential(1, 500, 10)
+    };
 
     let stdin = io::stdin();
     let mut stdin = stdin.lock();

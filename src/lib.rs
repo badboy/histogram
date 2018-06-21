@@ -5,7 +5,7 @@ extern crate serde_derive;
 
 use std::cmp;
 use std::fmt;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::ser::{Serialize, Serializer, SerializeStruct};
 
@@ -65,6 +65,37 @@ fn exponential_range(min: usize, max: usize, count: usize) -> Vec<usize> {
     }
 
   ranges
+}
+
+fn pack_histogram(buckets: Buckets) -> Vec<(usize, usize)> {
+    let mut res = vec![];
+
+    let mut first = true;
+    let mut last = 0;
+    let len = buckets.histogram.bucket_count;
+    let mut last_start = 42;
+    let mut previous_start = 0;
+
+    for (idx, bucket) in buckets.enumerate() {
+        if bucket.count() == 0 {
+            continue;
+        }
+
+        if idx > 0 && first {
+            res.push((previous_start, 0))
+        }
+        last_start = bucket.end;
+        first = false;
+        last = idx+1;
+        previous_start = bucket.start;
+        res.push((bucket.start, bucket.count));
+    }
+
+    if last > 0 && last < len {
+        res.push((last_start, 0))
+    }
+
+    res
 }
 
 impl Histogram {
@@ -349,9 +380,10 @@ impl Serialize for Histogram
         state.serialize_field("range", &[self.min, self.max])?;
         state.serialize_field("bucket_count", &self.bucket_count)?;
         state.serialize_field("histogram_type", &self.typ)?;
-        let values = self.buckets.iter().enumerate().map(|(idx, count)| {
-            (self.ranges[idx].to_string(), *count)
-        }).collect::<HashMap<String, usize>>();
+        let values = pack_histogram(self.buckets())
+            .iter()
+            .map(|&(a,b)| (a.to_string(),b))
+            .collect::<BTreeMap<String, usize>>();
         state.serialize_field("values", &values)?;
         state.serialize_field("sum", &self.sum)?;
         state.end()

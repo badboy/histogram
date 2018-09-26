@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/https://github.com/badboy/histogram.svg?branch=master)](https://travis-ci.org/https://github.com/badboy/histogram)
+[![Build Status](https://travis-ci.org/badboy/histogram.svg?branch=master)](https://travis-ci.org/badboy/histogram)
 
 # histogram
 

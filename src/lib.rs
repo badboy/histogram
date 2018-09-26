@@ -12,7 +12,7 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 pub mod ffi;
 
 #[derive(Debug, Serialize)]
-pub enum HistoTyp {
+pub enum Type {
     Linear,
     Exponential,
     Boolean,
@@ -28,7 +28,7 @@ pub struct Histogram {
 
     count: usize,
     sum: usize,
-    typ: HistoTyp,
+    typ: Type,
 }
 
 fn linear_range(min: usize, max: usize, count: usize) -> Vec<usize> {
@@ -110,7 +110,7 @@ impl Histogram {
             buckets: vec![0; ranges.len()],
             count: 0,
             sum: 0,
-            typ: HistoTyp::Linear,
+            typ: Type::Linear,
         }
     }
 
@@ -127,7 +127,7 @@ impl Histogram {
             buckets: vec![0; count],
             count: 0,
             sum: 0,
-            typ: HistoTyp::Linear,
+            typ: Type::Linear,
         }
     }
 
@@ -144,7 +144,7 @@ impl Histogram {
             buckets: vec![0; count],
             count: 0,
             sum: 0,
-            typ: HistoTyp::Exponential,
+            typ: Type::Exponential,
         }
     }
 
@@ -154,13 +154,13 @@ impl Histogram {
 
     pub fn boolean() -> Histogram {
         let mut h = Self::linear(1, 2, 3);
-        h.typ = HistoTyp::Boolean;
+        h.typ = Type::Boolean;
         h
     }
 
     pub fn enumerated(count: usize) -> Histogram {
         let mut h = Self::linear(1, count, count + 1);
-        h.typ = HistoTyp::Enumerated;
+        h.typ = Type::Enumerated;
         h
     }
 

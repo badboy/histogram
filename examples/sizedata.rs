@@ -2,7 +2,7 @@
 
 extern crate histogram;
 
-use histogram::{HistoTyp, Histogram};
+use histogram::{Type, Histogram};
 use std::io::{self, Write};
 use std::{mem, process};
 
@@ -15,7 +15,7 @@ fn main() {
 }
 
 fn try_main() -> io::Result<()> {
-    println!("HistoType size: {}", mem::size_of::<HistoTyp>());
+    println!("Histogram type size: {}", mem::size_of::<Type>());
     println!("Histogram size: {}", mem::size_of::<Histogram>());
 
     Ok(())

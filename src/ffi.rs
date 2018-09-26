@@ -21,7 +21,7 @@ pub unsafe extern "C" fn histogram_factory_get(
         buckets: vec![0; bucket_count as usize],
         count: 0,
         sum: 0,
-        typ: super::HistoTyp::Linear,
+        typ: super::Type::Linear,
     };
 
     Box::into_raw(Box::new(h))

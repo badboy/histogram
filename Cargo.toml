@@ -2,9 +2,17 @@
 name = "histogram"
 version = "0.1.0"
 authors = ["Jan-Erik Rediger <janerik@fnordig.de>"]
+repository = "https://github.com/badboy/histogram"
+homepage = "https://github.com/badboy/histogram"
+license = "MIT"
+readme = "README.md"
+
+[badges]
+travis-ci = { repository = "https://github.com/badboy/histogram", branch = "master" }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
 
 [dependencies]
 serde = "1.0.66"

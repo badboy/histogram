@@ -1,3 +1,5 @@
+//! Create, modify and serialize histograms over FFI
+
 use serde_json;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};

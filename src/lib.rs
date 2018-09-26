@@ -1,3 +1,26 @@
+//! # A histogram library
+//!
+//! A simple library for histograms, with features required by Firefox.
+//!
+//! It supports linear, exponential, bool and enumerated histograms.
+//! It can be serialized to a packed and a full representation.
+//! It can be constructed from FFI-provided bucket boundaries,
+//! avoiding additional allocation for metadata.
+//!
+//! ## Example
+//!
+//! ```rust
+//! # use histogram::Histogram;
+//! let mut hist = Histogram::exponential(1, 500, 10);
+//!
+//! for i in 1..=10 {
+//!     hist.add(i);
+//! }
+//!
+//! assert_eq!(10, hist.count());
+//! assert_eq!(55, hist.sum());
+//! ```
+
 extern crate serde;
 extern crate serde_json;
 #[macro_use]
@@ -11,6 +34,7 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 pub mod ffi;
 
+/// The type of a histogram.
 #[derive(Debug, Serialize)]
 pub enum Type {
     Linear,
@@ -19,6 +43,10 @@ pub enum Type {
     Enumerated,
 }
 
+/// A histogram.
+///
+/// Stores the ranges of buckets as well as counts per buckets.
+/// It also tracks the count of added values and the total sum.
 #[derive(Debug)]
 pub struct Histogram {
     min: usize,

@@ -288,6 +288,11 @@ impl Histogram {
             *bucket = 0;
         }
     }
+
+    /// Check if this histogram recorded any values.
+    pub fn is_empty(&self) -> bool {
+        self.count == 0
+    }
 }
 
 /// An iterator over the buckets in a histogram.
@@ -572,7 +577,9 @@ mod tests {
         assert_eq!(5, h.count());
         assert_eq!(0 + 1 + 14 + 450 + 700, h.sum());
 
+        assert!(!h.is_empty(), "Histogram should not empty");
         h.clear();
+        assert!(h.is_empty(), "Histogram should be empty");
 
         assert_eq!(0, h.count());
         assert_eq!(0, h.sum());

@@ -242,8 +242,8 @@ impl Histogram {
         &mut self.buckets[mid]
     }
 
-    pub fn persisted(&self) -> PersistedHistogram {
-        PersistedHistogram { histogram: self }
+    pub fn persisted(&self) -> PackedHistogram {
+        PackedHistogram { histogram: self }
     }
 }
 
@@ -379,16 +379,17 @@ impl fmt::Display for Histogram {
     }
 }
 
-pub struct PersistedHistogram<'a> {
+/// Packed representation of a histogram for serialization
+pub struct PackedHistogram<'a> {
     histogram: &'a Histogram,
 }
 
-impl<'a> Serialize for PersistedHistogram<'a> {
+impl<'a> Serialize for PackedHistogram<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("PersistedHistogram", 2)?;
+        let mut state = serializer.serialize_struct("PackedHistogram", 2)?;
         state.serialize_field("sum", &self.histogram.sum)?;
         state.serialize_field("counts", &self.histogram.buckets)?;
         state.end()

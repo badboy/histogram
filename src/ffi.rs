@@ -8,7 +8,8 @@ use super::Histogram;
 #[no_mangle]
 pub unsafe extern "C" fn histogram_factory_get(min: c_int, max: c_int,
                                                bucket_count: usize, ranges: *const usize) -> *mut Histogram {
-    let ranges : &'static [usize] = slice::from_raw_parts(ranges, bucket_count);
+    let ranges : &'static [usize] = slice::from_raw_parts(ranges, bucket_count+1);
+    assert_eq!(::std::i32::MAX, ranges[bucket_count] as i32);
     let h = Histogram {
             min: min as usize,
             max: max as usize,

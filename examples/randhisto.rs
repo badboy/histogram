@@ -3,9 +3,9 @@
 extern crate histogram;
 extern crate rand;
 
+use rand::{thread_rng, Rng};
 use std::io::{self, Write};
 use std::process;
-use rand::{thread_rng, Rng};
 
 fn main() {
     if let Err(e) = try_main() {
@@ -24,7 +24,7 @@ fn try_main() -> io::Result<()> {
 
     let sample_count = 1_000_000;
     for _ in 0..sample_count {
-        let sample = rng.gen_range(min, max+1);
+        let sample = rng.gen_range(min, max + 1);
         hist.add(sample);
     }
 

@@ -4,14 +4,14 @@ extern crate serde_json;
 extern crate serde_derive;
 
 use std::cmp;
-use std::fmt;
 use std::collections::BTreeMap;
+use std::fmt;
 
-use serde::ser::{Serialize, Serializer, SerializeStruct};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 pub mod ffi;
 
-#[derive(Debug,Serialize)]
+#[derive(Debug, Serialize)]
 pub enum HistoTyp {
     Linear,
     Exponential,
@@ -54,16 +54,20 @@ fn exponential_range(min: usize, max: usize, count: usize) -> Vec<usize> {
     }
     ranges.push(current);
 
-    for i in 2 .. count {
+    for i in 2..count {
         let log_current = (current as f64).ln();
         let log_ratio = (log_max - log_current) / (count - i) as f64;
         let log_next = log_current + log_ratio;
         let next_value = log_next.exp().round() as usize;
-        current = if next_value > current { next_value } else { current + 1 };
+        current = if next_value > current {
+            next_value
+        } else {
+            current + 1
+        };
         ranges.push(current);
     }
 
-  ranges
+    ranges
 }
 
 fn pack_histogram(buckets: Buckets) -> Vec<(usize, usize)> {
@@ -85,7 +89,7 @@ fn pack_histogram(buckets: Buckets) -> Vec<(usize, usize)> {
         }
         last_start = bucket.end;
         first = false;
-        last = idx+1;
+        last = idx + 1;
         previous_start = bucket.start;
         res.push((bucket.start, bucket.count));
     }
@@ -196,7 +200,7 @@ impl Histogram {
         let mut mid;
 
         loop {
-            mid = under + (over - under)/2;
+            mid = under + (over - under) / 2;
             if mid == under {
                 break;
             }
@@ -211,9 +215,7 @@ impl Histogram {
     }
 
     pub fn persisted(&self) -> PersistedHistogram {
-        PersistedHistogram {
-            histogram: self
-        }
+        PersistedHistogram { histogram: self }
     }
 }
 
@@ -232,10 +234,10 @@ impl<'a> Iterator for Buckets<'a> {
             return None;
         }
         let start = self.histogram.ranges[self.index];
-        let end = if self.index+1 == self.histogram.bucket_count() {
+        let end = if self.index + 1 == self.histogram.bucket_count() {
             ::std::usize::MAX
         } else {
-            self.histogram.ranges[self.index+1]
+            self.histogram.ranges[self.index + 1]
         };
 
         let count = self.histogram.buckets[self.index];
@@ -354,11 +356,10 @@ impl fmt::Display for Histogram {
 }
 
 pub struct PersistedHistogram<'a> {
-    histogram: &'a Histogram
+    histogram: &'a Histogram,
 }
 
-impl<'a> Serialize for PersistedHistogram<'a>
-{
+impl<'a> Serialize for PersistedHistogram<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -370,8 +371,7 @@ impl<'a> Serialize for PersistedHistogram<'a>
     }
 }
 
-impl Serialize for Histogram
-{
+impl Serialize for Histogram {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -382,7 +382,7 @@ impl Serialize for Histogram
         state.serialize_field("histogram_type", &self.typ)?;
         let values = pack_histogram(self.buckets())
             .iter()
-            .map(|&(a,b)| (a.to_string(),b))
+            .map(|&(a, b)| (a.to_string(), b))
             .collect::<BTreeMap<String, usize>>();
         state.serialize_field("values", &values)?;
         state.serialize_field("sum", &self.sum)?;
@@ -405,11 +405,17 @@ mod tests {
         h.add(700);
 
         assert_eq!(5, h.count());
-        assert_eq!(0+1+14+450+700, h.sum());
+        assert_eq!(0 + 1 + 14 + 450 + 700, h.sum());
 
         let expected_counts = [1, 2, 0, 0, 0, 0, 0, 0, 1, 1];
         for (bucket, &expected) in h.buckets().zip(expected_counts.iter()) {
-            assert_eq!(expected, bucket.count(), "{:?} should have {} values", bucket, expected);
+            assert_eq!(
+                expected,
+                bucket.count(),
+                "{:?} should have {} values",
+                bucket,
+                expected
+            );
         }
     }
 
@@ -424,11 +430,17 @@ mod tests {
         h.add(700);
 
         assert_eq!(5, h.count());
-        assert_eq!(0+1+14+450+700, h.sum());
+        assert_eq!(0 + 1 + 14 + 450 + 700, h.sum());
 
         let expected_counts = [1, 1, 0, 0, 1, 0, 0, 0, 1, 1];
         for (bucket, &expected) in h.buckets().zip(expected_counts.iter()) {
-            assert_eq!(expected, bucket.count(), "{:?} should have {} values", bucket, expected);
+            assert_eq!(
+                expected,
+                bucket.count(),
+                "{:?} should have {} values",
+                bucket,
+                expected
+            );
         }
     }
 
@@ -437,16 +449,22 @@ mod tests {
         let mut h = Histogram::enumerated(10);
 
         for i in 0..10 {
-            h.add(i+1);
+            h.add(i + 1);
         }
         h.add(10);
 
         assert_eq!(11, h.count());
-        assert_eq!(10+10+9+8+7+6+5+4+3+2+1, h.sum());
+        assert_eq!(10 + 10 + 9 + 8 + 7 + 6 + 5 + 4 + 3 + 2 + 1, h.sum());
 
         let expected_counts = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2];
         for (bucket, &expected) in h.buckets().zip(expected_counts.iter()) {
-            assert_eq!(expected, bucket.count(), "{:?} should have {} values", bucket, expected);
+            assert_eq!(
+                expected,
+                bucket.count(),
+                "{:?} should have {} values",
+                bucket,
+                expected
+            );
         }
     }
 
@@ -455,7 +473,7 @@ mod tests {
         let mut h = Histogram::boolean();
 
         for i in 0..10 {
-            h.add((i%2==0) as usize);
+            h.add((i % 2 == 0) as usize);
         }
 
         assert_eq!(10, h.count());
@@ -463,7 +481,13 @@ mod tests {
 
         let expected_counts = [5, 5, 0];
         for (bucket, &expected) in h.buckets().zip(expected_counts.iter()) {
-            assert_eq!(expected, bucket.count(), "{:?} should have {} values", bucket, expected);
+            assert_eq!(
+                expected,
+                bucket.count(),
+                "{:?} should have {} values",
+                bucket,
+                expected
+            );
         }
     }
 }

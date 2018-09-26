@@ -1,24 +1,28 @@
-use std::slice;
-use std::os::raw::{c_int, c_char};
-use std::ffi::CString;
 use serde_json;
+use std::ffi::CString;
+use std::os::raw::{c_char, c_int};
+use std::slice;
 
 use super::Histogram;
 
 #[no_mangle]
-pub unsafe extern "C" fn histogram_factory_get(min: c_int, max: c_int,
-                                               bucket_count: usize, ranges: *const usize) -> *mut Histogram {
-    let ranges : &'static [usize] = slice::from_raw_parts(ranges, bucket_count+1);
+pub unsafe extern "C" fn histogram_factory_get(
+    min: c_int,
+    max: c_int,
+    bucket_count: usize,
+    ranges: *const usize,
+) -> *mut Histogram {
+    let ranges: &'static [usize] = slice::from_raw_parts(ranges, bucket_count + 1);
     assert_eq!(::std::i32::MAX, ranges[bucket_count] as i32);
     let h = Histogram {
-            min: min as usize,
-            max: max as usize,
-            ranges: ranges,
-            buckets: vec![0; bucket_count as usize],
-            count: 0,
-            sum: 0,
-            typ: super::HistoTyp::Linear,
-        };
+        min: min as usize,
+        max: max as usize,
+        ranges: ranges,
+        buckets: vec![0; bucket_count as usize],
+        count: 0,
+        sum: 0,
+        typ: super::HistoTyp::Linear,
+    };
 
     Box::into_raw(Box::new(h))
 }

@@ -134,6 +134,11 @@ fn pack_histogram(buckets: Buckets) -> Vec<(usize, usize)> {
 }
 
 impl Histogram {
+    /// Create a histogram with a range of min..max from the given ranges.
+    ///
+    /// ## Requirements
+    ///
+    /// * `ranges.len()` is the number of buckets
     pub fn factory_get(min: usize, max: usize, ranges: &'static [usize]) -> Histogram {
         Histogram {
             min,
@@ -146,6 +151,9 @@ impl Histogram {
         }
     }
 
+    /// Create a histogram with `count` linear  buckets in the range `min` to `max`.
+    ///
+    /// The minimum will be at least 1.
     pub fn linear(min: usize, max: usize, count: usize) -> Histogram {
         let min = cmp::max(1, min);
 
@@ -163,6 +171,9 @@ impl Histogram {
         }
     }
 
+    /// Create a histogram with `count` exponential buckets in the range `min` to `max`.
+    ///
+    /// The minimum will be at least 1.
     pub fn exponential(min: usize, max: usize, count: usize) -> Histogram {
         let min = cmp::max(1, min);
 
@@ -180,30 +191,45 @@ impl Histogram {
         }
     }
 
+    /// Create a flag histogram.
+    ///
+    /// This histogram type allows you to record a single value (0 or 1, default 0).
+    ///
+    /// **Deprecated.**
     pub fn flag() -> Histogram {
         Self::boolean()
     }
 
+    /// Create a boolean histogram.
+    ///
+    /// These histograms only record boolean values.
     pub fn boolean() -> Histogram {
         let mut h = Self::linear(1, 2, 3);
         h.typ = Type::Boolean;
         h
     }
 
+    /// Create a histogram over enumeratable values.
+    ///
+    /// An enumerated histogram consists of exactly `count` buckets.
+    /// Each bucket is associated with a consecutive integer.
     pub fn enumerated(count: usize) -> Histogram {
         let mut h = Self::linear(1, count, count + 1);
         h.typ = Type::Enumerated;
         h
     }
 
+    /// Get the number of buckets in this histogram.
     pub fn bucket_count(&self) -> usize {
         self.buckets.len()
     }
 
+    /// Add a single value to this histogram.
     pub fn add(&mut self, value: usize) {
         self.accumulate(value, 1);
     }
 
+    /// Add `count` number of values.
     pub fn accumulate(&mut self, value: usize, count: usize) {
         self.sum += value * count;
         self.count += count;
@@ -218,10 +244,12 @@ impl Histogram {
         }
     }
 
+    /// Get the total sum of values recorded in this histogram.
     pub fn sum(&self) -> usize {
         self.sum
     }
 
+    /// Get the total count of values recorded in this histogram.
     pub fn count(&self) -> usize {
         self.count
     }
@@ -246,6 +274,7 @@ impl Histogram {
         &mut self.buckets[mid]
     }
 
+    /// Get a packed representation of this histogram.
     pub fn persisted(&self) -> PackedHistogram {
         PackedHistogram { histogram: self }
     }

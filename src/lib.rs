@@ -278,6 +278,16 @@ impl Histogram {
     pub fn persisted(&self) -> PackedHistogram {
         PackedHistogram { histogram: self }
     }
+
+    /// Clear all stores values of this histogram.
+    pub fn clear(&mut self) {
+        self.count = 0;
+        self.sum = 0;
+
+        for bucket in &mut self.buckets {
+            *bucket = 0;
+        }
+    }
 }
 
 /// An iterator over the buckets in a histogram.
@@ -547,5 +557,28 @@ mod tests {
                 expected
             );
         }
+    }
+
+    #[test]
+    fn clear() {
+        let mut h = Histogram::exponential(1, 500, 10);
+
+        h.add(0);
+        h.add(1);
+        h.add(14);
+        h.add(450);
+        h.add(700);
+
+        assert_eq!(5, h.count());
+        assert_eq!(0 + 1 + 14 + 450 + 700, h.sum());
+
+        h.clear();
+
+        assert_eq!(0, h.count());
+        assert_eq!(0, h.sum());
+
+        h.add(5);
+        assert_eq!(1, h.count());
+        assert_eq!(5, h.sum());
     }
 }

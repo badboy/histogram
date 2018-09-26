@@ -10,7 +10,6 @@ pub unsafe extern "C" fn histogram_factory_get(min: c_int, max: c_int,
                                                bucket_count: usize, ranges: *const usize) -> *mut Histogram {
     let ranges : &'static [usize] = slice::from_raw_parts(ranges, bucket_count);
     let h = Histogram {
-            bucket_count: bucket_count as usize,
             min: min as usize,
             max: max as usize,
             ranges: ranges,

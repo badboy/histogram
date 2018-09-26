@@ -21,7 +21,6 @@ pub enum HistoTyp {
 
 #[derive(Debug)]
 pub struct Histogram {
-    bucket_count: usize,
     min: usize,
     max: usize,
     ranges: &'static [usize],
@@ -72,7 +71,7 @@ fn pack_histogram(buckets: Buckets) -> Vec<(usize, usize)> {
 
     let mut first = true;
     let mut last = 0;
-    let len = buckets.histogram.bucket_count;
+    let len = buckets.histogram.bucket_count();
     let mut last_start = 42;
     let mut previous_start = 0;
 
@@ -101,7 +100,6 @@ fn pack_histogram(buckets: Buckets) -> Vec<(usize, usize)> {
 impl Histogram {
     pub fn factory_get(min: usize, max: usize, ranges: &'static [usize]) -> Histogram {
         Histogram {
-            bucket_count: ranges.len(),
             min: min,
             max: max,
             ranges: ranges,
@@ -119,7 +117,6 @@ impl Histogram {
         let ranges = Box::leak(ranges.into_boxed_slice());
 
         Histogram {
-            bucket_count: count,
             min: min,
             max: max,
             ranges: ranges,
@@ -137,7 +134,6 @@ impl Histogram {
         let ranges = Box::leak(ranges.into_boxed_slice());
 
         Histogram {
-            bucket_count: count,
             min: min,
             max: max,
             ranges: ranges,
@@ -162,6 +158,10 @@ impl Histogram {
         let mut h = Self::linear(1, count, count + 1);
         h.typ = HistoTyp::Enumerated;
         h
+    }
+
+    pub fn bucket_count(&self) -> usize {
+        self.buckets.len()
     }
 
     pub fn add(&mut self, value: usize) {
@@ -192,7 +192,7 @@ impl Histogram {
 
     fn bucket(&mut self, value: usize) -> &mut usize {
         let mut under = 0;
-        let mut over = self.bucket_count;
+        let mut over = self.bucket_count();
         let mut mid;
 
         loop {
@@ -228,11 +228,11 @@ impl<'a> Iterator for Buckets<'a> {
     type Item = Bucket;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.histogram.bucket_count {
+        if self.index >= self.histogram.bucket_count() {
             return None;
         }
         let start = self.histogram.ranges[self.index];
-        let end = if self.index+1 == self.histogram.bucket_count {
+        let end = if self.index+1 == self.histogram.bucket_count() {
             ::std::usize::MAX
         } else {
             self.histogram.ranges[self.index+1]
@@ -378,7 +378,7 @@ impl Serialize for Histogram
     {
         let mut state = serializer.serialize_struct("Histogram", 5)?;
         state.serialize_field("range", &[self.min, self.max])?;
-        state.serialize_field("bucket_count", &self.bucket_count)?;
+        state.serialize_field("bucket_count", &self.bucket_count())?;
         state.serialize_field("histogram_type", &self.typ)?;
         let values = pack_histogram(self.buckets())
             .iter()

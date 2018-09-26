@@ -17,7 +17,7 @@ pub unsafe extern "C" fn histogram_factory_get(
     let h = Histogram {
         min: min as usize,
         max: max as usize,
-        ranges: ranges,
+        ranges,
         buckets: vec![0; bucket_count as usize],
         count: 0,
         sum: 0,

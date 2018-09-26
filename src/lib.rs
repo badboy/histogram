@@ -104,9 +104,9 @@ fn pack_histogram(buckets: Buckets) -> Vec<(usize, usize)> {
 impl Histogram {
     pub fn factory_get(min: usize, max: usize, ranges: &'static [usize]) -> Histogram {
         Histogram {
-            min: min,
-            max: max,
-            ranges: ranges,
+            min,
+            max,
+            ranges,
             buckets: vec![0; ranges.len()],
             count: 0,
             sum: 0,
@@ -121,9 +121,9 @@ impl Histogram {
         let ranges = Box::leak(ranges.into_boxed_slice());
 
         Histogram {
-            min: min,
-            max: max,
-            ranges: ranges,
+            min,
+            max,
+            ranges,
             buckets: vec![0; count],
             count: 0,
             sum: 0,
@@ -138,9 +138,9 @@ impl Histogram {
         let ranges = Box::leak(ranges.into_boxed_slice());
 
         Histogram {
-            min: min,
-            max: max,
-            ranges: ranges,
+            min,
+            max,
+            ranges,
             buckets: vec![0; count],
             count: 0,
             sum: 0,
@@ -243,11 +243,7 @@ impl<'a> Iterator for Buckets<'a> {
         let count = self.histogram.buckets[self.index];
         self.index += 1;
 
-        Some(Bucket {
-            start,
-            end,
-            count: count,
-        })
+        Some(Bucket { start, end, count })
     }
 }
 

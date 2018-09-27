@@ -23,17 +23,17 @@ fn try_main() -> io::Result<()> {
     let min = args
         .next()
         .unwrap_or_else(|| String::from("1"))
-        .parse::<usize>()
+        .parse::<u32>()
         .unwrap();
     let max = args
         .next()
         .unwrap_or_else(|| String::from("500"))
-        .parse::<usize>()
+        .parse::<u32>()
         .unwrap();
     let count = args
         .next()
         .unwrap_or_else(|| String::from("10"))
-        .parse::<usize>()
+        .parse::<u32>()
         .unwrap();
 
     let mut hist = if typ == "linear" {
@@ -52,7 +52,7 @@ fn try_main() -> io::Result<()> {
             if line.is_empty() {
                 continue;
             }
-            let sample: usize = line
+            let sample: u32 = line
                 .trim()
                 .parse()
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;

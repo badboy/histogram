@@ -53,18 +53,18 @@ pub enum Type {
 /// It also tracks the count of added values and the total sum.
 #[derive(Debug)]
 pub struct Histogram {
-    min: usize,
-    max: usize,
-    ranges: &'static [usize],
-    buckets: Vec<usize>,
+    min: u32,
+    max: u32,
+    ranges: &'static [u32],
+    buckets: Vec<u32>,
 
-    count: usize,
-    sum: usize,
+    count: u32,
+    sum: u32,
     typ: Type,
 }
 
-fn linear_range(min: usize, max: usize, count: usize) -> Vec<usize> {
-    let mut ranges = Vec::with_capacity(count);
+fn linear_range(min: u32, max: u32, count: u32) -> Vec<u32> {
+    let mut ranges = Vec::with_capacity(count as usize);
     ranges.push(0);
 
     for i in 1..count {
@@ -75,10 +75,10 @@ fn linear_range(min: usize, max: usize, count: usize) -> Vec<usize> {
     ranges
 }
 
-fn exponential_range(min: usize, max: usize, count: usize) -> Vec<usize> {
+fn exponential_range(min: u32, max: u32, count: u32) -> Vec<u32> {
     let log_max = (max as f64).ln();
 
-    let mut ranges = Vec::with_capacity(count);
+    let mut ranges = Vec::with_capacity(count as usize);
     ranges.push(0);
     let mut current = min;
     if current == 0 {
@@ -90,7 +90,7 @@ fn exponential_range(min: usize, max: usize, count: usize) -> Vec<usize> {
         let log_current = (current as f64).ln();
         let log_ratio = (log_max - log_current) / (count - i) as f64;
         let log_next = log_current + log_ratio;
-        let next_value = log_next.exp().round() as usize;
+        let next_value = log_next.exp().round() as u32;
         current = if next_value > current {
             next_value
         } else {
@@ -102,7 +102,7 @@ fn exponential_range(min: usize, max: usize, count: usize) -> Vec<usize> {
     ranges
 }
 
-fn pack_histogram(buckets: Buckets) -> Vec<(usize, usize)> {
+fn pack_histogram(buckets: Buckets) -> Vec<(u32, u32)> {
     let mut res = vec![];
 
     let mut first = true;
@@ -139,7 +139,7 @@ impl Histogram {
     /// ## Requirements
     ///
     /// * `ranges.len()` is the number of buckets
-    pub fn factory_get(min: usize, max: usize, ranges: &'static [usize]) -> Histogram {
+    pub fn factory_get(min: u32, max: u32, ranges: &'static [u32]) -> Histogram {
         Histogram {
             min,
             max,
@@ -154,7 +154,7 @@ impl Histogram {
     /// Create a histogram with `count` linear  buckets in the range `min` to `max`.
     ///
     /// The minimum will be at least 1.
-    pub fn linear(min: usize, max: usize, count: usize) -> Histogram {
+    pub fn linear(min: u32, max: u32, count: u32) -> Histogram {
         let min = cmp::max(1, min);
 
         let ranges = linear_range(min, max, count);
@@ -164,7 +164,7 @@ impl Histogram {
             min,
             max,
             ranges,
-            buckets: vec![0; count],
+            buckets: vec![0; count as usize],
             count: 0,
             sum: 0,
             typ: Type::Linear,
@@ -174,7 +174,7 @@ impl Histogram {
     /// Create a histogram with `count` exponential buckets in the range `min` to `max`.
     ///
     /// The minimum will be at least 1.
-    pub fn exponential(min: usize, max: usize, count: usize) -> Histogram {
+    pub fn exponential(min: u32, max: u32, count: u32) -> Histogram {
         let min = cmp::max(1, min);
 
         let ranges = exponential_range(min, max, count);
@@ -184,7 +184,7 @@ impl Histogram {
             min,
             max,
             ranges,
-            buckets: vec![0; count],
+            buckets: vec![0; count as usize],
             count: 0,
             sum: 0,
             typ: Type::Exponential,
@@ -213,7 +213,7 @@ impl Histogram {
     ///
     /// An enumerated histogram consists of exactly `count` buckets.
     /// Each bucket is associated with a consecutive integer.
-    pub fn enumerated(count: usize) -> Histogram {
+    pub fn enumerated(count: u32) -> Histogram {
         let mut h = Self::linear(1, count, count + 1);
         h.typ = Type::Enumerated;
         h
@@ -225,12 +225,12 @@ impl Histogram {
     }
 
     /// Add a single value to this histogram.
-    pub fn add(&mut self, value: usize) {
+    pub fn add(&mut self, value: u32) {
         self.accumulate(value, 1);
     }
 
     /// Add `count` number of values.
-    pub fn accumulate(&mut self, value: usize, count: usize) {
+    pub fn accumulate(&mut self, value: u32, count: u32) {
         self.sum += value * count;
         self.count += count;
         *self.bucket(value) += 1;
@@ -245,16 +245,16 @@ impl Histogram {
     }
 
     /// Get the total sum of values recorded in this histogram.
-    pub fn sum(&self) -> usize {
+    pub fn sum(&self) -> u32 {
         self.sum
     }
 
     /// Get the total count of values recorded in this histogram.
-    pub fn count(&self) -> usize {
+    pub fn count(&self) -> u32 {
         self.count
     }
 
-    fn bucket(&mut self, value: usize) -> &mut usize {
+    fn bucket(&mut self, value: u32) -> &mut u32 {
         let mut under = 0;
         let mut over = self.bucket_count();
         let mut mid;
@@ -311,7 +311,7 @@ impl<'a> Iterator for Buckets<'a> {
         }
         let start = self.histogram.ranges[self.index];
         let end = if self.index + 1 == self.histogram.bucket_count() {
-            ::std::usize::MAX
+            ::std::u32::MAX
         } else {
             self.histogram.ranges[self.index + 1]
         };
@@ -326,24 +326,24 @@ impl<'a> Iterator for Buckets<'a> {
 /// A bucket is a range of samples and their count.
 #[derive(Clone)]
 pub struct Bucket {
-    start: usize,
-    end: usize,
-    count: usize,
+    start: u32,
+    end: u32,
+    count: u32,
 }
 
 impl Bucket {
     /// The number of samples in this bucket's range.
-    pub fn count(&self) -> usize {
+    pub fn count(&self) -> u32 {
         self.count
     }
 
     /// The start of this bucket's range.
-    pub fn start(&self) -> usize {
+    pub fn start(&self) -> u32 {
         self.start
     }
 
     /// The end of this bucket's range.
-    pub fn end(&self) -> usize {
+    pub fn end(&self) -> u32 {
         self.end
     }
 }
@@ -366,7 +366,7 @@ impl fmt::Display for Histogram {
 
         let max_bucket_count = self.buckets().map(|b| b.count()).fold(0, cmp::max);
 
-        const WIDTH: usize = 50;
+        const WIDTH: u32 = 50;
         let count_per_char = cmp::max(max_bucket_count / WIDTH, 1);
 
         writeln!(f, "# Each ∎ is a count of {}", count_per_char)?;
@@ -383,7 +383,7 @@ impl fmt::Display for Histogram {
         let mut end_str = String::new();
         let widest_range = self.buckets().fold(0, |n, b| {
             end_str.clear();
-            if b.end() == ::std::usize::MAX {
+            if b.end() == ::std::u32::MAX {
                 cmp::max(n, 3)
             } else {
                 write!(&mut end_str, "{}", b.end()).unwrap();
@@ -401,7 +401,7 @@ impl fmt::Display for Histogram {
             }
 
             end_str.clear();
-            if bucket.end() == ::std::usize::MAX {
+            if bucket.end() == ::std::u32::MAX {
                 write!(&mut end_str, "INF").unwrap();
             } else {
                 write!(&mut end_str, "{}", bucket.end()).unwrap();
@@ -456,7 +456,7 @@ impl Serialize for Histogram {
         let values = pack_histogram(self.buckets())
             .iter()
             .map(|&(a, b)| (a.to_string(), b))
-            .collect::<BTreeMap<String, usize>>();
+            .collect::<BTreeMap<String, _>>();
         state.serialize_field("values", &values)?;
         state.serialize_field("sum", &self.sum)?;
         state.end()
@@ -546,7 +546,7 @@ mod tests {
         let mut h = Histogram::boolean();
 
         for i in 0..10 {
-            h.add((i % 2 == 0) as usize);
+            h.add((i % 2 == 0) as u32);
         }
 
         assert_eq!(10, h.count());

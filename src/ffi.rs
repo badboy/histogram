@@ -2,23 +2,23 @@
 
 use serde_json;
 use std::ffi::CString;
-use std::os::raw::{c_char, c_int};
+use std::os::raw::{c_char, c_uint};
 use std::slice;
 
 use super::Histogram;
 
 #[no_mangle]
 pub unsafe extern "C" fn histogram_factory_get(
-    min: c_int,
-    max: c_int,
-    bucket_count: usize,
-    ranges: *const usize,
+    min: c_uint,
+    max: c_uint,
+    bucket_count: c_uint,
+    ranges: *const c_uint,
 ) -> *mut Histogram {
-    let ranges: &'static [usize] = slice::from_raw_parts(ranges, bucket_count + 1);
-    assert_eq!(::std::i32::MAX, ranges[bucket_count] as i32);
+    let ranges: &'static [u32] = slice::from_raw_parts(ranges, bucket_count as usize + 1);
+    assert_eq!(::std::i32::MAX, ranges[bucket_count as usize] as i32);
     let h = Histogram {
-        min: min as usize,
-        max: max as usize,
+        min: min,
+        max: max,
         ranges,
         buckets: vec![0; bucket_count as usize],
         count: 0,
@@ -35,10 +35,10 @@ pub unsafe extern "C" fn histogram_free(ranges: *mut Histogram) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn histogram_add(histogram: *mut Histogram, value: c_int) {
+pub unsafe extern "C" fn histogram_add(histogram: *mut Histogram, value: c_uint) {
     debug_assert!(!histogram.is_null());
     let histogram = &mut *histogram;
-    histogram.add(value as usize);
+    histogram.add(value as u32);
 }
 
 #[no_mangle]

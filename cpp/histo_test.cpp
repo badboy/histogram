@@ -65,11 +65,15 @@ int main(void)
   Hist* h = nullptr;
   h = Hist::FactoryGet(1, 60000, count, buckets);
 
-  h->Add(20);
+  for (int i=0; i<10; i++) {
+    h->Add(20+i);
+  }
 
   std::string s = h->Serialize();
+  std::cout << "Serialized: " << s << std::endl;
 
-  std::cout << s << std::endl;
+  s = h->Persist();
+  std::cout << "Persisted:  " << s << std::endl;
 
   delete h;
 

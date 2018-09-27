@@ -64,10 +64,5 @@ fn try_main() -> io::Result<()> {
     }
 
     println!("{}", hist);
-    let serialized = serde_json::to_string(&hist.persisted()).unwrap();
-    println!("persisted = {}", serialized);
-
-    let serialized = serde_json::to_string_pretty(&hist).unwrap();
-    println!("serialized = \n{}", serialized);
     Ok(())
 }

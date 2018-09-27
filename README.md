@@ -24,7 +24,7 @@ assert_eq!(10, hist.count());
 assert_eq!(55, hist.sum());
 
 for bucket in hist.buckets() {
-  println!("Bucket {}..{} has {} elements", bucket.start(), bucket.end(), bucket.count());
+    println!("Bucket {}..{} has {} elements", bucket.start(), bucket.end(), bucket.count());
 }
 ```
 

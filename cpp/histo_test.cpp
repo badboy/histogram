@@ -3,7 +3,7 @@
 
 struct Hist {
   public:
-    static Hist* FactoryGet(int min, int max, size_t bucket_count, const size_t* buckets);
+    static Hist* FactoryGet(int min, int max, unsigned int bucket_count, const unsigned int* buckets);
     ~Hist();
 
     void Add(int value);
@@ -13,10 +13,10 @@ struct Hist {
   protected:
     Hist() : mPtr(nullptr) {}
 
-    Histogram *mPtr;
+    void *mPtr;
 };
 
-Hist* Hist::FactoryGet(int min, int max, size_t bucket_count, const size_t* buckets) {
+Hist* Hist::FactoryGet(int min, int max, unsigned int bucket_count, const unsigned int* buckets) {
   Hist *hist = new Hist;
 
   hist->mPtr = histogram_factory_get(min, max, bucket_count, buckets);
@@ -49,7 +49,7 @@ std::string Hist::Persist() {
   return str;
 }
 
-const size_t gHistogramBucketLowerBounds[] = {
+const unsigned int gHistogramBucketLowerBounds[] = {
 0,1,2,INT_MAX,
 0,1,2 ,INT_MAX,
 0,1,2,3,4,5,6,7,8,9,10,11 ,INT_MAX,
@@ -59,7 +59,7 @@ const size_t gHistogramBucketLowerBounds[] = {
 int main(void)
 {
   size_t offset = 21;
-  const size_t* buckets = &gHistogramBucketLowerBounds[offset];
+  const unsigned int* buckets = &gHistogramBucketLowerBounds[offset];
   size_t count = 20;
 
   Hist* h = nullptr;

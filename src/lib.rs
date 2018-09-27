@@ -39,12 +39,13 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 pub mod ffi;
 
 /// The type of a histogram.
-#[derive(Debug, Serialize)]
+#[derive(Copy, Clone, Debug, Serialize)]
 pub enum Type {
-    Linear,
-    Exponential,
-    Boolean,
-    Enumerated,
+    Exponential = 0,
+    Linear = 1,
+    Boolean = 2,
+    Flag = 3,
+    External = 4,
 }
 
 /// A histogram.
@@ -52,11 +53,11 @@ pub enum Type {
 /// Stores the ranges of buckets as well as counts per buckets.
 /// It also tracks the count of added values and the total sum.
 #[derive(Debug)]
-pub struct Histogram {
+pub struct Histogram<T: AsRef<[u32]>> {
     min: u32,
     max: u32,
-    ranges: &'static [u32],
-    buckets: Vec<u32>,
+    ranges: T,
+    buckets: Box<[u32]>,
 
     count: u32,
     sum: u32,
@@ -102,7 +103,7 @@ fn exponential_range(min: u32, max: u32, count: u32) -> Vec<u32> {
     ranges
 }
 
-fn pack_histogram(buckets: Buckets) -> Vec<(u32, u32)> {
+fn pack_histogram<T: AsRef<[u32]>>(buckets: Buckets<T>) -> Vec<(u32, u32)> {
     let mut res = vec![];
 
     let mut first = true;
@@ -133,90 +134,23 @@ fn pack_histogram(buckets: Buckets) -> Vec<(u32, u32)> {
     res
 }
 
-impl Histogram {
+impl<T: AsRef<[u32]>> Histogram<T> {
     /// Create a histogram with a range of min..max from the given ranges.
     ///
     /// ## Requirements
     ///
     /// * `ranges.len()` is the number of buckets
-    pub fn factory_get(min: u32, max: u32, ranges: &'static [u32]) -> Histogram {
+    pub fn factory_get(min: u32, max: u32, ranges: T) -> Histogram<T> {
+        let len = ranges.as_ref().len();
         Histogram {
             min,
             max,
             ranges,
-            buckets: vec![0; ranges.len()],
+            buckets: vec![0; len].into_boxed_slice(),
             count: 0,
             sum: 0,
-            typ: Type::Linear,
+            typ: Type::External,
         }
-    }
-
-    /// Create a histogram with `count` linear  buckets in the range `min` to `max`.
-    ///
-    /// The minimum will be at least 1.
-    pub fn linear(min: u32, max: u32, count: u32) -> Histogram {
-        let min = cmp::max(1, min);
-
-        let ranges = linear_range(min, max, count);
-        let ranges = Box::leak(ranges.into_boxed_slice());
-
-        Histogram {
-            min,
-            max,
-            ranges,
-            buckets: vec![0; count as usize],
-            count: 0,
-            sum: 0,
-            typ: Type::Linear,
-        }
-    }
-
-    /// Create a histogram with `count` exponential buckets in the range `min` to `max`.
-    ///
-    /// The minimum will be at least 1.
-    pub fn exponential(min: u32, max: u32, count: u32) -> Histogram {
-        let min = cmp::max(1, min);
-
-        let ranges = exponential_range(min, max, count);
-        let ranges = Box::leak(ranges.into_boxed_slice());
-
-        Histogram {
-            min,
-            max,
-            ranges,
-            buckets: vec![0; count as usize],
-            count: 0,
-            sum: 0,
-            typ: Type::Exponential,
-        }
-    }
-
-    /// Create a flag histogram.
-    ///
-    /// This histogram type allows you to record a single value (0 or 1, default 0).
-    ///
-    /// **Deprecated.**
-    pub fn flag() -> Histogram {
-        Self::boolean()
-    }
-
-    /// Create a boolean histogram.
-    ///
-    /// These histograms only record boolean values.
-    pub fn boolean() -> Histogram {
-        let mut h = Self::linear(1, 2, 3);
-        h.typ = Type::Boolean;
-        h
-    }
-
-    /// Create a histogram over enumeratable values.
-    ///
-    /// An enumerated histogram consists of exactly `count` buckets.
-    /// Each bucket is associated with a consecutive integer.
-    pub fn enumerated(count: u32) -> Histogram {
-        let mut h = Self::linear(1, count, count + 1);
-        h.typ = Type::Enumerated;
-        h
     }
 
     /// Get the number of buckets in this histogram.
@@ -237,7 +171,7 @@ impl Histogram {
     }
 
     /// Get an iterator over this histogram's buckets.
-    pub fn buckets(&self) -> Buckets {
+    pub fn buckets(&self) -> Buckets<T> {
         Buckets {
             histogram: self,
             index: 0,
@@ -264,7 +198,7 @@ impl Histogram {
             if mid == under {
                 break;
             }
-            if self.ranges[mid] <= value {
+            if self.ranges()[mid] <= value {
                 under = mid;
             } else {
                 over = mid;
@@ -274,9 +208,13 @@ impl Histogram {
         &mut self.buckets[mid]
     }
 
-    /// Get a packed representation of this histogram.
-    pub fn persisted(&self) -> PackedHistogram {
-        PackedHistogram { histogram: self }
+    fn ranges(&self) -> &[u32] {
+        self.ranges.as_ref()
+    }
+
+    /// Get a representation of this histogram suitable for persisting.
+    pub fn persisted(&self) -> PersistedHistogram<T> {
+        PersistedHistogram { histogram: self }
     }
 
     /// Clear all stores values of this histogram.
@@ -284,7 +222,7 @@ impl Histogram {
         self.count = 0;
         self.sum = 0;
 
-        for bucket in &mut self.buckets {
+        for bucket in self.buckets.iter_mut() {
             *bucket = 0;
         }
     }
@@ -295,25 +233,95 @@ impl Histogram {
     }
 }
 
+impl Histogram<Box<[u32]>> {
+    /// Create a histogram with `count` linear  buckets in the range `min` to `max`.
+    ///
+    /// The minimum will be at least 1.
+    pub fn linear(min: u32, max: u32, count: u32) -> Histogram<Box<[u32]>> {
+        let min = cmp::max(1, min);
+
+        let ranges = linear_range(min, max, count);
+        let ranges = ranges.into_boxed_slice();
+
+        Histogram {
+            min,
+            max,
+            ranges,
+            buckets: vec![0; count as usize].into_boxed_slice(),
+            count: 0,
+            sum: 0,
+            typ: Type::Linear,
+        }
+    }
+
+    /// Create a histogram with `count` exponential buckets in the range `min` to `max`.
+    ///
+    /// The minimum will be at least 1.
+    pub fn exponential(min: u32, max: u32, count: u32) -> Histogram<Box<[u32]>> {
+        let min = cmp::max(1, min);
+
+        let ranges = exponential_range(min, max, count);
+        let ranges = ranges.into_boxed_slice();
+
+        Histogram {
+            min,
+            max,
+            ranges,
+            buckets: vec![0; count as usize].into_boxed_slice(),
+            count: 0,
+            sum: 0,
+            typ: Type::Exponential,
+        }
+    }
+
+    /// Create a flag histogram.
+    ///
+    /// This histogram type allows you to record a single value (0 or 1, default 0).
+    ///
+    /// **Deprecated.**
+    pub fn flag() -> Histogram<Box<[u32]>> {
+        let mut hist = Self::boolean();
+        hist.typ = Type::Flag;
+        hist
+    }
+
+    /// Create a boolean histogram.
+    ///
+    /// These histograms only record boolean values.
+    pub fn boolean() -> Histogram<Box<[u32]>> {
+        let mut h = Self::linear(1, 2, 3);
+        h.typ = Type::Boolean;
+        h
+    }
+
+    /// Create a histogram over enumeratable values.
+    ///
+    /// An enumerated histogram consists of exactly `count` buckets.
+    /// Each bucket is associated with a consecutive integer.
+    pub fn enumerated(count: u32) -> Histogram<Box<[u32]>> {
+        Self::linear(1, count, count + 1)
+    }
+}
+
 /// An iterator over the buckets in a histogram.
 #[derive(Debug, Clone)]
-pub struct Buckets<'a> {
-    histogram: &'a Histogram,
+pub struct Buckets<'a, T: 'a + AsRef<[u32]>> {
+    histogram: &'a Histogram<T>,
     index: usize,
 }
 
-impl<'a> Iterator for Buckets<'a> {
+impl<'a, T: AsRef<[u32]>> Iterator for Buckets<'a, T> {
     type Item = Bucket;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index >= self.histogram.bucket_count() {
             return None;
         }
-        let start = self.histogram.ranges[self.index];
+        let start = self.histogram.ranges()[self.index];
         let end = if self.index + 1 == self.histogram.bucket_count() {
             ::std::u32::MAX
         } else {
-            self.histogram.ranges[self.index + 1]
+            self.histogram.ranges()[self.index + 1]
         };
 
         let count = self.histogram.buckets[self.index];
@@ -354,7 +362,7 @@ impl fmt::Debug for Bucket {
     }
 }
 
-impl fmt::Display for Histogram {
+impl<T: AsRef<[u32]>> fmt::Display for Histogram<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use std::fmt::Write;
 
@@ -428,23 +436,23 @@ impl fmt::Display for Histogram {
 }
 
 /// Packed representation of a histogram for serialization
-pub struct PackedHistogram<'a> {
-    histogram: &'a Histogram,
+pub struct PersistedHistogram<'a, T: 'a + AsRef<[u32]>> {
+    histogram: &'a Histogram<T>,
 }
 
-impl<'a> Serialize for PackedHistogram<'a> {
+impl<'a, T: AsRef<[u32]>> Serialize for PersistedHistogram<'a, T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("PackedHistogram", 2)?;
+        let mut state = serializer.serialize_struct("PersistedHistogram", 2)?;
         state.serialize_field("sum", &self.histogram.sum)?;
         state.serialize_field("counts", &self.histogram.buckets)?;
         state.end()
     }
 }
 
-impl Serialize for Histogram {
+impl<T: AsRef<[u32]>> Serialize for Histogram<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -452,7 +460,7 @@ impl Serialize for Histogram {
         let mut state = serializer.serialize_struct("Histogram", 5)?;
         state.serialize_field("range", &[self.min, self.max])?;
         state.serialize_field("bucket_count", &self.bucket_count())?;
-        state.serialize_field("histogram_type", &self.typ)?;
+        state.serialize_field("histogram_type", &(self.typ as u32))?;
         let values = pack_histogram(self.buckets())
             .iter()
             .map(|&(a, b)| (a.to_string(), b))

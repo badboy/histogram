@@ -14,7 +14,7 @@ cpp/histo_test: cpp/histo_test.cpp libhistogram.dylib cpp/histogram.h
 	g++ $(CFLAGS) -o $@ cpp/histo_test.cpp libhistogram.dylib
 
 cpp/histogram.h: src/lib.rs src/ffi.rs
-	cbindgen -l c++ -o $@ .
+	cbindgen --config cbindgen.toml --output $@ .
 
 libhistogram.dylib: src/lib.rs src/ffi.rs
 	cargo build --release

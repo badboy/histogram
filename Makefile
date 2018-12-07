@@ -1,3 +1,5 @@
+CFLAGS = -std=c++14
+
 all: cpp
 .PHONY: all
 

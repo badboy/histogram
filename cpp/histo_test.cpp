@@ -8,11 +8,9 @@ class StaticHistogram final {
     histogram_free(reinterpret_cast<StaticHistogram*>(aHistogram));
   }
 
-  static inline std::unique_ptr<StaticHistogram> NewHistogram(
+  static inline StaticHistogram* NewHistogram(
       int min, int max, size_t bucket_count, const unsigned int* buckets) {
-    std::unique_ptr<StaticHistogram> histogram(
-        histogram_factory_get(min, max, bucket_count, buckets));
-    return histogram;
+    return histogram_factory_get(min, max, bucket_count, buckets);
   }
 
   inline void Add(unsigned int sample) { histogram_add(this, sample); }
@@ -44,7 +42,7 @@ int main(void) {
   const unsigned int* buckets = &gHistogramBucketLowerBounds[offset];
   size_t count = 20;
 
-  std::unique_ptr<StaticHistogram> h = nullptr;
+  StaticHistogram* h = nullptr;
   h = StaticHistogram::NewHistogram(1, 60000, count, buckets);
 
   for (int i = 0; i < 10; i++) {
@@ -57,7 +55,7 @@ int main(void) {
    s = h->Persist();
    std::cout << "Persisted:  " << s << std::endl;
 
-  // delete h;
+  delete h;
 
   return 0;
 }

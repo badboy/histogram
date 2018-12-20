@@ -6,6 +6,7 @@ use std::os::raw::{c_char, c_int, c_uint};
 use std::slice;
 
 use super::Histogram;
+use super::Snapshot;
 
 /// A histogram created from static data for ranges.
 pub type StaticHistogram = Histogram<&'static [u32]>;
@@ -98,4 +99,27 @@ pub unsafe extern "C" fn histogram_serialize(histogram: *mut StaticHistogram) ->
 #[no_mangle]
 pub unsafe extern "C" fn histogram_free_cstr(s: *mut c_char) {
     let _str = CString::from_raw(s);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn histogram_snapshot(histogram: *const StaticHistogram) -> *mut Snapshot {
+    let histogram = &*histogram;
+    Box::into_raw(Box::new(histogram.snapshot()))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn histogram_snapshot_counts(snapshot: *const Snapshot, idx: c_int) -> u32 {
+    let snapshot = &*snapshot;
+    snapshot.counts[idx as usize]
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn histogram_snapshot_sum(snapshot: *const Snapshot) -> u32 {
+    let snapshot = &*snapshot;
+    snapshot.sum
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn histogram_snapshot_free(snapshot: *mut Snapshot) {
+    let _ = Box::from_raw(snapshot);
 }

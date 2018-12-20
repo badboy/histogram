@@ -64,6 +64,12 @@ pub struct Histogram<T: AsRef<[u32]>> {
     typ: Type,
 }
 
+#[derive(Debug)]
+pub struct Snapshot {
+    counts: Box<[u32]>,
+    sum: u32,
+}
+
 fn linear_range(min: u32, max: u32, count: u32) -> Vec<u32> {
     let mut ranges = Vec::with_capacity(count as usize);
     ranges.push(0);
@@ -233,6 +239,13 @@ impl<T: AsRef<[u32]>> Histogram<T> {
     /// Check if this histogram recorded any values.
     pub fn is_empty(&self) -> bool {
         self.count == 0
+    }
+
+    pub fn snapshot(&self) -> Snapshot {
+        Snapshot {
+            counts: self.buckets.clone(),
+            sum: self.sum,
+        }
     }
 }
 

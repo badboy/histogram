@@ -159,7 +159,10 @@ impl<T: AsRef<[u32]>> Histogram<T> {
     }
 
     /// Add a single value to this histogram.
-    pub fn add(&mut self, value: u32) {
+    pub fn add(&mut self, mut value: u32) {
+        if value > (i32::max_value()-1) as u32 {
+            value -= 1;
+        }
         self.accumulate(value, 1);
     }
 
@@ -239,6 +242,7 @@ impl Histogram<Box<[u32]>> {
     /// The minimum will be at least 1.
     pub fn linear(min: u32, max: u32, count: u32) -> Histogram<Box<[u32]>> {
         let min = cmp::max(1, min);
+        let max = cmp::min(max, (i32::max_value()-1) as u32);
 
         let ranges = linear_range(min, max, count);
         let ranges = ranges.into_boxed_slice();

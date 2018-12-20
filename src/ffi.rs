@@ -2,7 +2,7 @@
 
 use serde_json;
 use std::ffi::CString;
-use std::os::raw::{c_char, c_uint};
+use std::os::raw::{c_char, c_int, c_uint};
 use std::slice;
 
 use super::Histogram;
@@ -16,9 +16,9 @@ pub unsafe extern "C" fn histogram_factory_get(
     min: c_uint,
     max: c_uint,
     bucket_count: usize,
-    ranges: *const c_uint,
+    ranges: *const c_int,
 ) -> *mut StaticHistogram {
-    let ranges: &'static [u32] = slice::from_raw_parts(ranges, bucket_count + 1);
+    let ranges: &'static [u32] = slice::from_raw_parts(ranges as *const c_uint, bucket_count + 1);
     assert_eq!(::std::i32::MAX, ranges[bucket_count] as i32);
     let h = Histogram {
         min: min,
@@ -42,7 +42,35 @@ pub unsafe extern "C" fn histogram_free(histogram: *mut StaticHistogram) {
 /// Add a single value to the given histogram.
 #[no_mangle]
 pub unsafe extern "C" fn histogram_add(histogram: *mut StaticHistogram, sample: c_uint) {
-    histogram.add(sample as usize);
+    let histogram = &mut *histogram;
+    histogram.add(sample);
+}
+
+/// Clear the stored data in the histogram
+#[no_mangle]
+pub unsafe extern "C" fn histogram_clear(histogram: *mut StaticHistogram) {
+    let histogram = &mut *histogram;
+    histogram.clear();
+}
+
+/// Check if this histogram recorded any values.
+#[no_mangle]
+pub unsafe extern "C" fn histogram_is_empty(histogram: *const StaticHistogram) -> bool {
+    let histogram = &*histogram;
+    histogram.is_empty()
+}
+
+/// Get the number of buckets in this histogram.
+#[no_mangle]
+pub unsafe extern "C" fn histogram_bucket_count(histogram: *const StaticHistogram) -> usize {
+    let histogram = &*histogram;
+    histogram.bucket_count()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn histogram_ranges(histogram: *const StaticHistogram, idx: c_int) -> u32 {
+    let histogram = &*histogram;
+    histogram.ranges[idx as usize]
 }
 
 /// Serialize the histogram into a persistable JSON string.

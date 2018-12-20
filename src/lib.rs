@@ -217,7 +217,7 @@ impl<T: AsRef<[u32]>> Histogram<T> {
         PersistedHistogram { histogram: self }
     }
 
-    /// Clear all stores values of this histogram.
+    /// Clear the stored data in the histogram
     pub fn clear(&mut self) {
         self.count = 0;
         self.sum = 0;

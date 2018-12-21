@@ -1,4 +1,4 @@
-CFLAGS = -std=c++14
+CFLAGS = -std=c++14 -Wall
 
 all: cpp
 .PHONY: all
